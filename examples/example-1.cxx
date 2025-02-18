@@ -22,7 +22,7 @@
 
 #define NCCLCHECK(cmd) do {                         \
   ncclResult_t r = cmd;                             \
-  if (r!= ncclSuccess) {                            \
+  if (r!= ncclSuccess && r!=ncclInProgress) {                            \
     printf("Failed, NCCL error %s:%d '%s'\n",       \
         __FILE__,__LINE__,ncclGetErrorString(r));   \
     exit(EXIT_FAILURE);                             \
@@ -43,12 +43,17 @@ ncclResult_t ncclCommInitAllNonBlocking(ncclComm_t* comm, int ndev, const int* d
         config.cgaClusterSize = 2;
         config.netName = "Socket";
         NCCLCHECK(ncclCommInitRankConfig(comm + i, ndev, Id, i, &config));
-        do {
-            NCCLCHECK(ncclCommGetAsyncError(*comm, &state));
-        // Handle outside events, timeouts, progress, ...
-        } while(state == ncclInProgress);
     }
     ncclGroupEnd();
+    do {
+        NCCLCHECK(ncclCommGetAsyncError(*comm, &state));
+    // Handle outside events, timeouts, progress, ...
+    } while(state == ncclInProgress);
+    do {
+        NCCLCHECK(ncclCommGetAsyncError(*(comm + 1), &state));
+    // Handle outside events, timeouts, progress, ...
+    } while(state == ncclInProgress);
+    assert(state == ncclSuccess);
     return state;
   }
 
