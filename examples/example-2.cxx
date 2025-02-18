@@ -57,31 +57,13 @@ static void getHostName(char *hostname, int maxlen) {
 }
 
 int main(int argc, char *argv[]) {
-
-    int size = 32 * 1024 * 1024;
+    int size = 1;
     int myRank, nRanks, localRank = 0;
 
     // initializing MPI
     MPICHECK(MPI_Init(&argc, &argv));
     MPICHECK(MPI_Comm_rank(MPI_COMM_WORLD, &myRank));
     MPICHECK(MPI_Comm_size(MPI_COMM_WORLD, &nRanks));
-
-    // calculating localRank based on hostname which is used in
-    // selecting a GPU
-    uint64_t hostHashs[nRanks];
-    char hostname[1024];
-    getHostName(hostname, 1024);
-    hostHashs[myRank] = getHostHash(hostname);
-    MPICHECK(MPI_Allgather(MPI_IN_PLACE, 0, MPI_DATATYPE_NULL,
-                           hostHashs, sizeof(uint64_t), MPI_BYTE, MPI_COMM_WORLD));
-    for (int p = 0; p < nRanks; p++) {
-        if (p == myRank) {
-            break;
-        }
-        if (hostHashs[p] == hostHashs[myRank]) {
-            localRank++;
-        }
-    }
 
     ncclUniqueId id;
     ncclComm_t comm;
